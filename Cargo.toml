@@ -1,12 +1,11 @@
 [package]
-name = "cli-rag-llm-research"
+name = "mergil"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 reqwest = { version = "0.12.5", features = ["json"] }
+serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
 tempfile = "3.10.1"
 tokio = { version = "1.38.0", features = ["full"] }
