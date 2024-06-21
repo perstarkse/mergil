@@ -6,3 +6,4 @@ Features:
 - [x] Implement README.md
 - [ ] Recursion LLM calls
 - [ ] Set up basic prompts
+- [ ] Enable MD formatting of output, inspo from glow?
