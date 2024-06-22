@@ -25,6 +25,7 @@ async fn test_api_request() {
         &api_key,
         "deepseek/deepseek-coder",
         &contents_vec,
+        false
     )
     .await
     .unwrap();
