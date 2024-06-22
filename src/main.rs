@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = api::get_api_key();
     let client = reqwest::Client::new();
     
-    match api::send_api_request(&client, &api_key, &cli.model, &contents).await {
+    match api::send_api_request(&client, &api_key, &cli.model, &contents, cli.no_markdown).await {
         Ok(api_response) => {
             if let Some(choice) = api_response.choices.get(0) {
                 let trimmed_content = choice.message.content.trim_start();

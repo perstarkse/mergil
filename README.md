@@ -6,7 +6,7 @@ Features:
 - [x] Implement README.md
 - [ ] Add help information
 - [ ] Recursion LLM calls
-- [ ] Set up basic prompts
+- [x] Set up basic prompts
 - [x] Enable MD formatting of output, glow looks great
 - [x] Use clap-rs for arguments
 - [ ] Implement configuration file support (e.g., TOML or YAML)
@@ -21,7 +21,7 @@ Error handling:
 - [ ] Network error
 - [ ] Missing/wrong API key
 - [ ] Implement custom error types for better error handling
-- [ ] Add retry mechanism for transient errors
+- [x] Add retry mechanism for transient errors
 
 Testing:
 - [ ] Track coverage

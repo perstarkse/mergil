@@ -73,16 +73,37 @@ async fn make_api_request(
     api_key: &str,
     model: &str,
     contents: &[String],
+    no_markdown: bool,
 ) -> Result<ApiResponse, ApiError> {
-    let messages: Vec<serde_json::Value> = contents
-        .iter()
-        .map(|content| {
-            serde_json::json!({
-                "role": "user",
-                "content": content
-            })
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+
+    messages.push(serde_json::json!({
+        "role": "system",
+        "content": "You are a helpful coding tool. You should keep your answers brief, concise and mainly output code."
+    }));
+
+    // Add system message if Markdown is enabled
+    if !no_markdown {
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": "Please format your responses using Markdown syntax for better readability. Use appropriate Markdown elements for headers, lists, code blocks, and emphasis where applicable."
+        }));
+    }
+
+    if no_markdown {
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": "Answer without using markdown formatting!"
+        }));
+    }
+
+    // Add user messages
+    messages.extend(contents.iter().map(|content| {
+        serde_json::json!({
+            "role": "user",
+            "content": content
         })
-        .collect();
+    }));
 
     let response = client
         .post("https://openrouter.ai/api/v1/chat/completions")
@@ -112,13 +133,14 @@ pub async fn send_api_request(
     api_key: &str,
     model: &str,
     contents: &[String],
+    no_markdown: bool
 ) -> Result<ApiResponse, ApiError> {
     let retry_strategy = ExponentialBackoff::from_millis(100)
         .map(jitter)
         .take(3);
 
     Retry::spawn(retry_strategy, || async {
-        make_api_request(client, api_key, model, contents).await
+        make_api_request(client, api_key, model, contents, no_markdown).await
     })
     .await
     .map_err(|_| ApiError::RetryExhausted)
