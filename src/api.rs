@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
+use tokio_retry::{Retry, strategy::{ExponentialBackoff, jitter}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse {
@@ -46,12 +47,33 @@ struct ErrorDetails {
     code: u32,
 }
 
-pub async fn send_api_request(
+#[derive(Debug)]
+pub enum ApiError {
+    RequestFailed(reqwest::Error),
+    ResponseParseFailed(serde_json::Error),
+    ApiErrorResponse(String),
+    RetryExhausted,
+}
+
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ApiError::RequestFailed(e) => write!(f, "Request failed: {}", e),
+            ApiError::ResponseParseFailed(e) => write!(f, "Failed to parse response: {}", e),
+            ApiError::ApiErrorResponse(e) => write!(f, "API error: {}", e),
+            ApiError::RetryExhausted => write!(f, "Retry attempts exhausted"),
+        }
+    }
+}
+
+impl std::error::Error for ApiError {}
+
+async fn make_api_request(
     client: &Client,
     api_key: &str,
     model: &str,
     contents: &[String],
-) -> Result<ApiResponse, String> {
+) -> Result<ApiResponse, ApiError> {
     let messages: Vec<serde_json::Value> = contents
         .iter()
         .map(|content| {
@@ -72,19 +94,34 @@ pub async fn send_api_request(
         }))
         .send()
         .await
-        .map_err(|e| format!("Failed to send request: {}", e))?;
+        .map_err(ApiError::RequestFailed)?;
 
-    let response_text = response.text().await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+    let response_text = response.text().await.map_err(ApiError::RequestFailed)?;
 
     // Try to parse as an error response first
     if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&response_text) {
-        return Err(format!("API Error: {}", error_response.error.message));
+        return Err(ApiError::ApiErrorResponse(error_response.error.message));
     }
 
     // If it's not an error response, try to parse as the expected ApiResponse
-    serde_json::from_str::<ApiResponse>(&response_text)
-        .map_err(|e| format!("Failed to parse API response: {}", e))
+    serde_json::from_str::<ApiResponse>(&response_text).map_err(ApiError::ResponseParseFailed)
+}
+
+pub async fn send_api_request(
+    client: &Client,
+    api_key: &str,
+    model: &str,
+    contents: &[String],
+) -> Result<ApiResponse, ApiError> {
+    let retry_strategy = ExponentialBackoff::from_millis(100)
+        .map(jitter)
+        .take(3);
+
+    Retry::spawn(retry_strategy, || async {
+        make_api_request(client, api_key, model, contents).await
+    })
+    .await
+    .map_err(|_| ApiError::RetryExhausted)
 }
 
 pub fn get_api_key() -> String {
