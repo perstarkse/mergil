@@ -7,10 +7,10 @@ Features:
 - [ ] Add help information
 - [ ] Recursion LLM calls
 - [ ] Set up basic prompts
-- [ ] Enable MD formatting of output, inspo from glow? clap handles colors?
+- [x] Enable MD formatting of output, glow looks great
 - [x] Use clap-rs for arguments
 
 Error handling:
-  - [x] Missing model
-  - [ ] Network error
-  - [ ] Missing/wrong API key
+- [x] Missing model
+- [ ] Network error
+- [ ] Missing/wrong API key
