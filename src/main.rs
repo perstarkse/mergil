@@ -4,7 +4,7 @@ use mergil::input::{self, InputResult};
 use mergil::markdown;
 use tokio_stream::StreamExt;
     use indicatif::{ProgressBar, ProgressStyle};
-    use std::io::{self, Write};
+    use std::io::{self, Write, Read};
     use atty::Stream;
 
 #[derive(Parser)]
@@ -32,7 +32,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cli = Cli::parse();
 
         let mut contents = Vec::new();
@@ -42,12 +42,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             contents.push(cli.context.join(" "));
         }
 
-        if contents.is_empty() {
-            // Determine if we should force the editor to open
-            let force_editor = atty::is(Stream::Stdin);
+       // Check for piped input
+        if !atty::is(Stream::Stdin) {
+            let mut piped_input = String::new();
+            io::stdin().read_to_string(&mut piped_input)?;
+            if !piped_input.trim().is_empty() {
+                contents.push(piped_input);
+            }
+        }
 
-            // Handle piped input or open editor
-            match input::get_input(force_editor)? {
+        // If no input from args or pipe, open editor
+        if cli.context.is_empty() {
+            match input::get_input(true)? {
                 InputResult::Content(content) => contents.push(content),
                 InputResult::Cancelled => {
                     if cli.debug {
@@ -57,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
+
         if contents.is_empty() {
             if cli.debug {
                 println!("No input provided. Exiting.");
