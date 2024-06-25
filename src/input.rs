@@ -7,17 +7,21 @@ pub enum InputResult {
     Cancelled,
 }
 
-pub fn get_input() -> io::Result<InputResult> {
-    if atty::is(Stream::Stdin) {
-        // If no input is piped, open the editor
-        open_editor()
-    } else {
-        // If input is piped, read from STDIN
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer)?;
-        Ok(InputResult::Content(buffer))
+    pub fn get_input(force_editor: bool) -> io::Result<InputResult> {
+        if force_editor || atty::is(Stream::Stdin) {
+            // If force_editor is true or no input is piped, open the editor
+            open_editor()
+        } else {
+            // If input is piped, read from STDIN
+            let mut buffer = String::new();
+            io::stdin().read_to_string(&mut buffer)?;
+            if buffer.trim().is_empty() {
+                Ok(InputResult::Cancelled)
+            } else {
+                Ok(InputResult::Content(buffer))
+            }
+        }
     }
-}
 
 fn open_editor() -> io::Result<InputResult> {
     use std::env;

@@ -3,6 +3,9 @@ use mergil::api;
 use mergil::input::{self, InputResult};
 use mergil::markdown;
 use tokio_stream::StreamExt;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::io::{self, Write};
+    use atty::Stream;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -30,33 +33,43 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
+        let cli = Cli::parse();
 
-    let mut contents = match input::get_input()? {
-        InputResult::Content(content) => vec![content],
-        InputResult::Cancelled => {
+        let mut contents = Vec::new();
+
+        // Handle command-line input
+        if !cli.context.is_empty() {
+            contents.push(cli.context.join(" "));
+        }
+
+        if contents.is_empty() {
+            // Determine if we should force the editor to open
+            let force_editor = atty::is(Stream::Stdin);
+
+            // Handle piped input or open editor
+            match input::get_input(force_editor)? {
+                InputResult::Content(content) => contents.push(content),
+                InputResult::Cancelled => {
+                    if cli.debug {
+                        println!("Operation cancelled.");
+                    }
+                    return Ok(());
+                }
+            }
+        }
+        if contents.is_empty() {
             if cli.debug {
-                println!("Operation cancelled.");
+                println!("No input provided. Exiting.");
             }
             return Ok(());
         }
-    };
 
-    contents.extend(cli.context);
-
-    if contents.is_empty() {
         if cli.debug {
-            println!("No input provided. Exiting.");
+            println!("Input content:");
+            for (i, content) in contents.iter().enumerate() {
+                println!("{}. {}", i + 1, content);
+            }
         }
-        return Ok(());
-    }
-
-    if cli.debug {
-        println!("Input content:");
-        for (i, content) in contents.iter().enumerate() {
-            println!("{}. {}", i + 1, content);
-        }
-    }
 
     let api_key = api::get_api_key();
     let client = reqwest::Client::new();
@@ -83,26 +96,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 //     Ok(())
 // }
-    let mut stream = api::send_api_request(&client, &api_key, &cli.model, &contents, cli.no_markdown, cli.stream).await?;
+let mut stream = api::send_api_request(&client, &api_key, &cli.model,
+  &contents, cli.no_markdown, cli.stream).await?;
 
-    while let Some(chunk) = stream.next().await {
-        match chunk {
-            Ok(content) => {
-                markdown::render_markdown(&content);
-                // if !cli.no_markdown && markdown::is_markdown(&content) {
-                //     markdown::render_markdown(&content);
-                // } else {
-                //     println!("NO MARKDOWN");
-                //     print!("{}", content);
-                //     io::stdout().flush().unwrap();
-                // }
-            }
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                break;
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} {wide_msg}")
+                .unwrap()
+        );
+
+        let mut full_content = String::new();
+
+        while let Some(chunk) = stream.next().await {
+            match chunk {
+                Ok(content) => {
+                    full_content.push_str(&content);
+                    let formatted = markdown::format_markdown(&full_content);
+                    pb.set_message(formatted);
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    break;
+                }
             }
         }
-    }
 
-    Ok(())
-}
+        pb.finish_and_clear();
+
+        // Display the final content
+        if !cli.no_markdown {
+            markdown::render_markdown(&full_content);
+        } else {
+            println!("{}", full_content);
+        }
+
+        Ok(())
+    }
