@@ -1,10 +1,11 @@
 use clap::Parser;
 use mergil::api;
 use mergil::input::{self, InputResult};
-use mergil::markdown;
 use tokio_stream::StreamExt;
+use bat::PrettyPrinter;
+use std_prelude::IoWrite;
     use indicatif::{ProgressBar, ProgressStyle};
-    use std::io::{self, Write, Read};
+    use std::io::{self, Read};
     use atty::Stream;
 
 #[derive(Parser)]
@@ -103,24 +104,24 @@ struct Cli {
 
 //     Ok(())
 // }
-let mut stream = api::send_api_request(&client, &api_key, &cli.model,
+        let mut stream = api::send_api_request(&client, &api_key, &cli.model,
   &contents, cli.no_markdown, cli.stream).await?;
 
         let pb = ProgressBar::new_spinner();
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.green} {wide_msg}")
-                .unwrap()
-        );
 
-        let mut full_content = String::new();
+  pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green}
+  Generating...").unwrap());
+
+        let mut output = String::new();
 
         while let Some(chunk) = stream.next().await {
             match chunk {
                 Ok(content) => {
-                    full_content.push_str(&content);
-                    let formatted = markdown::format_markdown(&full_content);
-                    pb.set_message(formatted);
+                    output.push_str(&content);
+                    if cli.stream {
+                        print!("{}", content);
+                        io::stdout().flush()?;
+                    }
                 }
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -131,12 +132,22 @@ let mut stream = api::send_api_request(&client, &api_key, &cli.model,
 
         pb.finish_and_clear();
 
-        // Display the final content
-        if !cli.no_markdown {
-            markdown::render_markdown(&full_content);
-        } else {
-            println!("{}", full_content);
+        if !cli.stream {
+            if !cli.no_markdown {
+                render_markdown(&output);
+            } else {
+                println!("{}", output);
+            }
         }
 
         Ok(())
+    }
+
+    fn render_markdown(content: &str) {
+        let mut printer = PrettyPrinter::new();
+        printer
+            .input_from_bytes(content.as_bytes())
+            .language("markdown")
+            .print()
+            .unwrap();
     }
