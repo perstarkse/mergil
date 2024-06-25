@@ -1,10 +1,7 @@
 use reqwest::Client;
-use futures::stream::{self, Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::env;
 use tokio_retry::{Retry, strategy::{ExponentialBackoff, jitter}};
-use std::pin::Pin;
-use core::future;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse {
@@ -71,35 +68,13 @@ impl std::fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StreamingApiResponse {
-    pub id: String,
-    pub object: String,
-    pub created: u64,
-    pub model: String,
-    pub choices: Vec<StreamingChoice>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StreamingChoice {
-    pub delta: StreamingDelta,
-    pub index: u64,
-    pub finish_reason: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StreamingDelta {
-    pub content: Option<String>,
-}
-
 async fn make_api_request(
     client: &Client,
     api_key: &str,
     model: &str,
     contents: &[String],
     no_markdown: bool,
-    stream: bool,
-) -> Result<Pin<Box<dyn Stream<Item = Result<String, ApiError>> + Send>>, ApiError> {
+) -> Result<ApiResponse, ApiError> {
     let mut messages: Vec<serde_json::Value> = Vec::new();
 
     messages.push(serde_json::json!({
@@ -130,88 +105,42 @@ async fn make_api_request(
         })
     }));
 
-    let request_body = serde_json::json!({
-        "model": model,
-        "messages": messages,
-        "stream": stream
-    });
-
     let response = client
         .post("https://openrouter.ai/api/v1/chat/completions")
         .header("Content-Type", "application/json")
         .header("Authorization", format!("Bearer {}", api_key))
-        .json(&request_body)
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": messages
+        }))
         .send()
         .await
         .map_err(ApiError::RequestFailed)?;
 
-    if !response.status().is_success() {
-        let error_text = response.text().await.map_err(ApiError::RequestFailed)?;
-        return Err(ApiError::ApiErrorResponse(error_text));
+    let response_text = response.text().await.map_err(ApiError::RequestFailed)?;
+
+    // Try to parse as an error response first
+    if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&response_text) {
+        return Err(ApiError::ApiErrorResponse(error_response.error.message));
     }
 
-   if stream {
-        let stream = stream::unfold(response, |mut response| async move {
-            let chunk = match response.chunk().await {
-                Ok(Some(chunk)) => chunk,
-                Ok(None) => return None,
-                Err(e) => return Some((Err(ApiError::RequestFailed(e)), response)),
-            };
-
-            let text = String::from_utf8_lossy(&chunk).to_string();
-            let mut content = String::new();
-
-            for line in text.lines() {
-                if line.starts_with("data: ") {
-                    let json_str = line.trim_start_matches("data: ");
-                    if json_str == "[DONE]" {
-                        return None;
-                    }
-                    match serde_json::from_str::<StreamingApiResponse>(json_str) {
-                        Ok(resp) => {
-                            if let Some(choice) = resp.choices.get(0) {
-                                if let Some(delta_content) = &choice.delta.content {
-                                    content.push_str(delta_content);
-                                }
-                            }
-                        }
-                        Err(e) => return Some((Err(ApiError::ResponseParseFailed(e)), response)),
-                    }
-                }
-            }
-
-            if !content.is_empty() {
-                Some((Ok(content.replace('\n', " ")), response))
-            } else {
-                Some((Ok(String::new()), response))
-            }        
-        })
-        .filter(|result| future::ready(!matches!(result, Ok(content) if content.is_empty())));
-
-        Ok(Box::pin(stream))
-    } else {
-        let response_text = response.text().await.map_err(ApiError::RequestFailed)?;
-        let api_response: ApiResponse = serde_json::from_str(&response_text).map_err(ApiError::ResponseParseFailed)?;
-        let content = api_response.choices.get(0)
-            .map(|choice| choice.message.content.clone())
-            .unwrap_or_default();
-        Ok(Box::pin(stream::once(future::ready(Ok(content)))))
-    }
+    // If it's not an error response, try to parse as the expected ApiResponse
+    serde_json::from_str::<ApiResponse>(&response_text).map_err(ApiError::ResponseParseFailed)
 }
+
 pub async fn send_api_request(
     client: &Client,
     api_key: &str,
     model: &str,
     contents: &[String],
-    no_markdown: bool,
-    stream: bool,
-) -> Result<Pin<Box<dyn Stream<Item = Result<String, ApiError>> + Send>>, ApiError> {
+    no_markdown: bool
+) -> Result<ApiResponse, ApiError> {
     let retry_strategy = ExponentialBackoff::from_millis(100)
         .map(jitter)
         .take(3);
 
     Retry::spawn(retry_strategy, || async {
-        make_api_request(client, api_key, model, contents, no_markdown, stream).await
+        make_api_request(client, api_key, model, contents, no_markdown).await
     })
     .await
     .map_err(|_| ApiError::RetryExhausted)
