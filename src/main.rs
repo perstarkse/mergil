@@ -109,8 +109,7 @@ struct Cli {
 
         let pb = ProgressBar::new_spinner();
 
-  pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green}
-  Generating...").unwrap());
+        pb.set_style(ProgressStyle::default_spinner().template("{spinner:.green} Generating...").unwrap());
 
         let mut output = String::new();
 
@@ -144,10 +143,5 @@ struct Cli {
     }
 
     fn render_markdown(content: &str) {
-        let mut printer = PrettyPrinter::new();
-        printer
-            .input_from_bytes(content.as_bytes())
-            .language("markdown")
-            .print()
-            .unwrap();
+        termimad::print_text(&content);
     }
