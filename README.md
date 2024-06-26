@@ -12,9 +12,7 @@ Features:
 - [ ] Implement configuration file support (e.g., TOML or YAML)
 - [ ] Add support for multiple API providers (not just OpenRouter)
 - [ ] Implement a progress indicator for long-running API calls
-- [ ] Add a history feature to recall previous inputs and outputs
 - [ ] Implement output to file option
-- [ ] Add support for streaming responses from the API
 
 Error handling:
 - [x] Missing model
@@ -28,7 +26,6 @@ Testing:
 - [ ] Implement unit tests for each module
 - [ ] Add integration tests
 - [ ] Implement property-based testing using proptest or quickcheck
-<!-- - [ ] Set up CI/CD pipeline (e.g., GitHub Actions) -->
 
 Performance and Optimization:
 - [ ] Implement async runtime for concurrent API calls
