@@ -28,7 +28,7 @@ async fn test_send_api_request_success() {
 
     env::set_var("OPENROUTER_API_KEY", "test_key");
     let client = reqwest::Client::new();
-    let result = api::send_api_request(&client, "test_key", "test-model", &vec!["Hello".to_string()], false).await;
+   let result = api::send_api_request(&client, &mock_server.uri(), "test_key", "test-model", &vec!["Hello".to_string()], false).await;
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "Hello, world!");

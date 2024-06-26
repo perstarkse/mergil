@@ -1,8 +1,8 @@
 use mergil::api;
-    use mergil::input;
-    use reqwest::Client;
-    use std::fs::File;
-    use std::io::Read;
+use mergil::input;
+use reqwest::Client;
+use std::fs::File;
+use std::io::Read;
 
     async fn setup_api_key() -> Option<String> {
         match std::env::var("OPENROUTER_API_KEY") {
