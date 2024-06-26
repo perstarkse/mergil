@@ -1,5 +1,4 @@
 use mergil::api::{self, ApiError};
-use reqwest::IntoUrl;
 use std::env;
 use wiremock::{MockServer, Mock, ResponseTemplate};
 use wiremock::matchers::{method, path};

@@ -4,7 +4,7 @@ use std::io::Cursor;
 #[test]
 fn test_get_input_from_stdin() {
     let input = "Test input\n";
-    let cursor = Cursor::new(input);
+    let _cursor = Cursor::new(input);
     let result = input::get_input(false).unwrap();
 
     assert!(matches!(result, InputResult::Content(_)));
@@ -16,7 +16,7 @@ fn test_get_input_from_stdin() {
 #[test]
 fn test_get_input_cancelled() {
     let input = "\n";
-    let cursor = Cursor::new(input);
+    let _cursor = Cursor::new(input);
     let result = input::get_input(false).unwrap();
 
     assert!(matches!(result, InputResult::Cancelled));
