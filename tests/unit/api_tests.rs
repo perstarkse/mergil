@@ -29,11 +29,11 @@ async fn test_send_api_request_success() {
     let client = reqwest::Client::new();
     let result = api::send_api_request(
         &client,
-        &mock_server.uri(),
         "test_key",
         "test-model",
         &vec!["Hello".to_string()],
         false,
+        Some(&mock_server.uri()),
     )
     .await;
 
@@ -59,6 +59,7 @@ async fn test_send_api_request_error() {
         "test-model",
         &vec!["Hello".to_string()],
         false,
+        Some(&mock_server.uri()),
     )
     .await;
 

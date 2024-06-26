@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
 
     let response =
-        api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown).await?;
+        api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown, None).await?;
 
     let skin = markdown::create_madskin();
 

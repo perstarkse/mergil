@@ -77,8 +77,10 @@ async fn make_api_request(
     model: &str,
     contents: &[String],
     markdown: bool,
+    base_url: Option<&str>,
 ) -> Result<String, ApiError> {
     let mut messages: Vec<serde_json::Value> = Vec::new();
+    let url = base_url.unwrap_or("https://openrouter.ai/api/v1/chat/completions");
 
     messages.push(serde_json::json!({
         "role": "system",
@@ -114,7 +116,7 @@ async fn make_api_request(
     });
 
     let response = client
-        .post("https://openrouter.ai/api/v1/chat/completions")
+        .post(url)
         .header("Content-Type", "application/json")
         .header("Authorization", format!("Bearer {}", api_key))
         .json(&request_body)
@@ -144,11 +146,12 @@ pub async fn send_api_request(
     model: &str,
     contents: &[String],
     markdown: bool,
+    base_url: Option<&str>,
 ) -> Result<String, ApiError> {
     let retry_strategy = ExponentialBackoff::from_millis(100).map(jitter).take(3);
 
     Retry::spawn(retry_strategy, || async {
-        make_api_request(client, api_key, model, contents, markdown).await
+        make_api_request(client, api_key, model, contents, markdown, base_url).await
     })
     .await
     .map_err(|_| ApiError::RetryExhausted)

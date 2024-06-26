@@ -36,6 +36,7 @@ async fn test_api_request() {
             "deepseek/deepseek-coder",
             &contents_vec,
             false,
+            None,
         )
         .await
         .unwrap();
@@ -47,8 +48,7 @@ async fn test_api_request() {
 #[tokio::test]
 async fn test_markdown_api_request() {
     if let Some(api_key) = setup_api_key().await {
-        let test_data = "Generate a simple Rust function that adds two
-  numbers.";
+        let test_data = "Generate a simple Rust function that adds two numbers.";
         let contents_vec = vec![test_data.to_string()];
 
         let client = Client::new();
@@ -58,6 +58,7 @@ async fn test_markdown_api_request() {
             "deepseek/deepseek-coder",
             &contents_vec,
             true,
+            None,
         )
         .await
         .unwrap();
@@ -81,6 +82,7 @@ async fn test_multiple_inputs() {
             "deepseek/deepseek-coder",
             &contents_vec,
             false,
+            None,
         )
         .await
         .unwrap();
