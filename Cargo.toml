@@ -3,6 +3,14 @@ name = "mergil"
 version = "0.1.0"
 edition = "2021"
 
+[[test]]
+name = "unit"
+path = "tests/unit/mod.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration/mod.rs"
+
 [dependencies]
 ansi_term = "0.12.1"
 atty = "0.2.14"
@@ -10,6 +18,7 @@ bat = "0.24.0"
 clap = { version = "4.5.7", features = ["derive"] }
 futures = "0.3.30"
 indicatif = "0.17.8"
+mockito = "1.4.0"
 pulldown-cmark = "0.11.0"
 reqwest = { version = "0.12.5", features = ["json"] }
 serde = { version = "1.0.203", features = ["derive"] }
@@ -20,3 +29,4 @@ termimad = "0.29.4"
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-retry = "0.3.0"
 tokio-stream = "0.1.15"
+wiremock = "0.6.0"
