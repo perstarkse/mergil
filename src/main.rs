@@ -20,9 +20,9 @@ struct Cli {
     #[arg(long, default_value = "false")]
     debug: bool,
 
-    /// Disable Markdown rendering
-    #[arg(short = 'r', long)]
-    raw: bool,
+    /// Use Markdown rendering
+    #[arg(long, default_value = "false")]
+    markdown: bool,
 }
 
 #[tokio::main]
@@ -75,11 +75,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = api::get_api_key();
     let client = reqwest::Client::new();
 
-    let response = api::send_api_request(&client, &api_key, &cli.model, &contents, cli.raw).await?;
+    let response = api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown).await?;
 
     let skin = markdown::create_madskin();
 
-    if !cli.raw {
+    if cli.markdown {
         skin.print_text(&response);
     } else {
         println!("{}", response);

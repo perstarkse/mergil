@@ -73,7 +73,7 @@
         api_key: &str,
         model: &str,
         contents: &[String],
-        no_markdown: bool,
+        markdown: bool,
     ) -> Result<String, ApiError> {
         let mut messages: Vec<serde_json::Value> = Vec::new();
 
@@ -84,7 +84,7 @@
         }));
 
         // Add system message if Markdown is enabled
-        if !no_markdown {
+        if markdown {
             messages.push(serde_json::json!({
                 "role": "system",
                 "content": "Please format your responses using Markdown syntax
@@ -93,7 +93,7 @@
             }));
         }
 
-        if no_markdown {
+        if !markdown {
             messages.push(serde_json::json!({
                 "role": "system",
                 "content": "Answer without using markdown formatting!"
@@ -140,14 +140,14 @@
         api_key: &str,
         model: &str,
         contents: &[String],
-        no_markdown: bool,
+        markdown: bool,
     ) -> Result<String, ApiError> {
         let retry_strategy = ExponentialBackoff::from_millis(100)
             .map(jitter)
             .take(3);
 
         Retry::spawn(retry_strategy, || async {
-            make_api_request(client, api_key, model, contents, no_markdown).await
+            make_api_request(client, api_key, model, contents, markdown).await
         })
         .await
         .map_err(|_| ApiError::RetryExhausted)
