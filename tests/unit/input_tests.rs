@@ -1,5 +1,5 @@
-use mergil::input::{self, InputResult};
-use std::io::Cursor;
+// use mergil::input::{self, InputResult};
+// use std::io::Cursor;
 
 // #[test]
 // fn test_get_input_from_stdin() {

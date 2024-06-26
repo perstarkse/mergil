@@ -1,9 +1,9 @@
+use atty::Stream;
 use clap::Parser;
 use mergil::api;
-use mergil::markdown;
 use mergil::input::{self, InputResult};
+use mergil::markdown;
 use std::io::{self, Read};
-use atty::Stream;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -75,7 +75,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_key = api::get_api_key();
     let client = reqwest::Client::new();
 
-    let response = api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown).await?;
+    let response =
+        api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown).await?;
 
     let skin = markdown::create_madskin();
 
