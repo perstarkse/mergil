@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
+use std_prelude::Duration;
 use tokio_retry::{
     strategy::{jitter, ExponentialBackoff},
     Retry,
@@ -68,9 +69,7 @@ impl std::fmt::Display for ApiError {
         }
     }
 }
-
 impl std::error::Error for ApiError {}
-
 async fn make_api_request(
     client: &Client,
     api_key: &str,
@@ -79,37 +78,8 @@ async fn make_api_request(
     markdown: bool,
     base_url: Option<&str>,
 ) -> Result<String, ApiError> {
-    let mut messages: Vec<serde_json::Value> = Vec::new();
     let url = base_url.unwrap_or("https://openrouter.ai/api/v1/chat/completions");
-
-    messages.push(serde_json::json!({
-        "role": "system",
-        "content": "You are a helpful coding tool. You should keep your answers brief, concise and mainly output code."
-    }));
-
-    // Add system message if Markdown is enabled
-    if markdown {
-        messages.push(serde_json::json!({
-            "role": "system",
-            "content": "Please format your responses using Markdown syntax for better readability. Use appropriate Markdown elements for headers, lists, code blocks, and emphasis where applicable."
-        }));
-    }
-
-    if !markdown {
-        messages.push(serde_json::json!({
-            "role": "system",
-            "content": "Answer without using markdown formatting!"
-        }));
-    }
-
-    // Add user messages
-    messages.extend(contents.iter().map(|content| {
-        serde_json::json!({
-            "role": "user",
-            "content": content
-        })
-    }));
-
+    let messages = build_messages(contents, markdown);
     let request_body = serde_json::json!({
         "model": model,
         "messages": messages,
@@ -125,21 +95,51 @@ async fn make_api_request(
         .map_err(ApiError::RequestFailed)?;
 
     if !response.status().is_success() {
-        let error_text = response.text().await.map_err(ApiError::RequestFailed)?;
-        return Err(ApiError::ApiErrorResponse(error_text));
+        return Err(ApiError::ApiErrorResponse(
+            response.text().await.map_err(ApiError::RequestFailed)?,
+        ));
     }
 
     let response_text = response.text().await.map_err(ApiError::RequestFailed)?;
     let api_response: ApiResponse =
         serde_json::from_str(&response_text).map_err(ApiError::ResponseParseFailed)?;
-    let content = api_response
+
+    Ok(api_response
         .choices
         .get(0)
         .map(|choice| choice.message.content.clone())
-        .unwrap_or_default();
-    Ok(content)
+        .unwrap_or_default())
 }
+fn build_messages(contents: &[String], markdown: bool) -> Vec<serde_json::Value> {
+    let mut messages = vec![serde_json::json!({
+        "role": "system",
+        "content": "You are a helpful coding tool. You should keep
+    your answers brief, concise and mainly output code."
+    })];
 
+    if markdown {
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": "Please format your responses using Markdown syntax
+  for better readability. Use appropriate Markdown elements for headers,
+  lists, code blocks, and emphasis where applicable."
+        }));
+    } else {
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": "Answer without using markdown formatting!"
+        }));
+    }
+
+    messages.extend(contents.iter().map(|content| {
+        serde_json::json!({
+            "role": "user",
+            "content": content
+        })
+    }));
+
+    messages
+}
 pub async fn send_api_request(
     client: &Client,
     api_key: &str,
@@ -148,13 +148,21 @@ pub async fn send_api_request(
     markdown: bool,
     base_url: Option<&str>,
 ) -> Result<String, ApiError> {
-    let retry_strategy = ExponentialBackoff::from_millis(100).map(jitter).take(3);
+    let max_retries = 3;
+    let initial_delay = Duration::from_millis(100);
 
-    Retry::spawn(retry_strategy, || async {
-        make_api_request(client, api_key, model, contents, markdown, base_url).await
-    })
-    .await
-    .map_err(|_| ApiError::RetryExhausted)
+    for attempt in 0..max_retries {
+        match make_api_request(client, api_key, model, contents, markdown, base_url).await {
+            Ok(response) => return Ok(response),
+            Err(e) => {
+                if attempt == max_retries - 1 {
+                    return Err(e);
+                }
+                tokio::time::sleep(initial_delay * 2u32.pow(attempt as u32)).await;
+            }
+        }
+    }
+    Err(ApiError::RetryExhausted)
 }
 
 pub fn get_api_key() -> String {
