@@ -12,8 +12,21 @@ async fn test_send_api_request_success() {
     Mock::given(method("POST"))
         .and(path("/api/v1/chat/completions"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "id": "test-id",
+            "model": "test-model",
+            "object": "object-test",
+            "created": 10010,
+            "system_fingerprint": "none",
+            "usage": {
+                "prompt_tokens": 50,
+                "completion_tokens": 60,
+                "total_tokens": 110
+            },
             "choices": [{
+                "finish_reason": "stop",
+                "index": 1,
                 "message": {
+                    "role": "assistant",
                     "content": "Hello, world!"
                 }
             }]
@@ -89,6 +102,7 @@ async fn test_send_api_request_retry() {
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "choices": [{
                 "message": {
+                    "role": "assistant",
                     "content": "Success after retry!"
                 }
             }]
