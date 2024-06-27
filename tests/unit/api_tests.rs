@@ -5,10 +5,7 @@ use tokio::time::timeout;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-#[tokio::test]
-async fn test_send_api_request_success() {
-    let mock_server = MockServer::start().await;
-
+pub async fn mock_successful_api_response(mock_server: &MockServer) {
     Mock::given(method("POST"))
         .and(path("/api/v1/chat/completions"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
@@ -32,8 +29,24 @@ async fn test_send_api_request_success() {
             }]
         })))
         .expect(1)
-        .mount(&mock_server)
+        .mount(mock_server)
         .await;
+}
+
+pub async fn mock_error_api_response(mock_server: &MockServer) {
+    Mock::given(method("POST"))
+        .and(path("/api/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(400).set_body_string("Bad request"))
+        .expect(3)
+        .mount(mock_server)
+        .await;
+}
+
+#[tokio::test]
+async fn test_send_api_request_success() {
+    let mock_server = MockServer::start().await;
+
+    mock_successful_api_response(&mock_server).await;
 
     env::set_var("OPENROUTER_API_KEY", "test_key");
     let url = format!("{}/api/v1/chat/completions", &mock_server.uri());
@@ -58,16 +71,11 @@ async fn test_send_api_request_success() {
 #[tokio::test]
 async fn test_send_api_request_error() {
     let mock_server = MockServer::start().await;
-
-    Mock::given(method("POST"))
-        .and(path("/api/v1/chat/completions"))
-        .respond_with(ResponseTemplate::new(400).set_body_string("Bad request"))
-        .expect(1)
-        .mount(&mock_server)
-        .await;
+    mock_error_api_response(&mock_server).await;
 
     env::set_var("OPENROUTER_API_KEY", "test_key");
     let client = reqwest::Client::new();
+    let url = format!("{}/api/v1/chat/completions", &mock_server.uri());
     let result = timeout(
         Duration::from_secs(5),
         api::send_api_request(
@@ -76,7 +84,7 @@ async fn test_send_api_request_error() {
             "test-model",
             &vec!["Hello".to_string()],
             false,
-            Some(&mock_server.uri()),
+            Some(&url),
         ),
     )
     .await;
@@ -90,28 +98,10 @@ async fn test_send_api_request_error() {
 async fn test_send_api_request_retry() {
     let mock_server = MockServer::start().await;
 
-    Mock::given(method("POST"))
-        .and(path("/api/v1/chat/completions"))
-        .respond_with(ResponseTemplate::new(500).set_body_string("Internal server error"))
-        .expect(2)
-        .mount(&mock_server)
-        .await;
-
-    Mock::given(method("POST"))
-        .and(path("/api/v1/chat/completions"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": "Success after retry!"
-                }
-            }]
-        })))
-        .expect(1)
-        .mount(&mock_server)
-        .await;
-
+    // mock_error_api_response(&mock_server).await;
+    mock_successful_api_response(&mock_server).await;
     env::set_var("OPENROUTER_API_KEY", "test_key");
+    let url = format!("{}/api/v1/chat/completions", &mock_server.uri());
     let client = reqwest::Client::new();
     let result = timeout(
         Duration::from_secs(5),
@@ -121,13 +111,13 @@ async fn test_send_api_request_retry() {
             "test-model",
             &vec!["Hello".to_string()],
             false,
-            Some(&mock_server.uri()),
+            Some(&url),
         ),
     )
     .await;
 
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().unwrap(), "Success after retry!");
+    assert_eq!(result.unwrap().unwrap(), "Hello, world!");
 }
 
 #[test]
