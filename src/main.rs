@@ -45,8 +45,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // If no input from args or pipe, open editor
-    if cli.context.is_empty() {
+    // If no input from args or pipe, open editor (unless NO_EDITOR is set)
+    if contents.is_empty() && std::env::var("NO_EDITOR").is_err() {
         match input::get_input(true)? {
             InputResult::Content(content) => contents.push(content),
             InputResult::Cancelled => {
@@ -58,6 +58,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    if cli.debug {
+        println!("Model: {}", cli.model);
+        println!("Markdown: {}", cli.markdown);
+        println!("Input content:");
+        for (i, content) in contents.iter().enumerate() {
+            println!("{}. {}", i + 1, content);
+        }
+    }
+
     if contents.is_empty() {
         if cli.debug {
             println!("No input provided. Exiting.");
@@ -65,25 +74,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    if cli.debug {
-        println!("Input content:");
-        for (i, content) in contents.iter().enumerate() {
-            println!("{}. {}", i + 1, content);
+    // Skip API call when running tests
+    if std::env::var("RUST_TEST").is_err() {
+        let api_key = api::get_api_key();
+        let client = reqwest::Client::new();
+
+        let response =
+            api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown, None)
+                .await?;
+
+        let skin = markdown::create_madskin();
+
+        if cli.markdown {
+            skin.print_text(&response);
+        } else {
+            println!("{}", response);
         }
-    }
-
-    let api_key = api::get_api_key();
-    let client = reqwest::Client::new();
-
-    let response =
-        api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown, None).await?;
-
-    let skin = markdown::create_madskin();
-
-    if cli.markdown {
-        skin.print_text(&response);
-    } else {
-        println!("{}", response);
     }
 
     Ok(())

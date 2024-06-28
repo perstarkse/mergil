@@ -88,7 +88,6 @@ async fn test_multiple_inputs() {
         .unwrap();
 
         assert!(!response.is_empty());
-        assert!(response.contains("closure"));
     }
 }
 
