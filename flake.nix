@@ -10,7 +10,7 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [ pkgs.bashInteractive pkgs.pkg-config pkgs.openssl ];
+          packages = [ pkgs.bashInteractive pkgs.pkg-config pkgs.openssl pkgs.cargo-tarpaulin ];
         };
       });
 }

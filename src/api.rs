@@ -65,7 +65,9 @@ impl std::fmt::Display for ApiError {
         }
     }
 }
+
 impl std::error::Error for ApiError {}
+
 async fn make_api_request(
     client: &Client,
     api_key: &str,
@@ -106,6 +108,7 @@ async fn make_api_request(
         .map(|choice| choice.message.content.clone())
         .unwrap_or_default())
 }
+
 fn build_messages(contents: &[String], markdown: bool) -> Vec<serde_json::Value> {
     let mut messages = vec![serde_json::json!({
         "role": "system",
@@ -136,6 +139,7 @@ fn build_messages(contents: &[String], markdown: bool) -> Vec<serde_json::Value>
 
     messages
 }
+
 pub async fn send_api_request(
     client: &Client,
     api_key: &str,
