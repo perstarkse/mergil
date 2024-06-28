@@ -2,10 +2,6 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std_prelude::Duration;
-use tokio_retry::{
-    strategy::{jitter, ExponentialBackoff},
-    Retry,
-};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse {

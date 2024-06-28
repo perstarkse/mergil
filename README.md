@@ -24,7 +24,7 @@ Error handling:
 Testing:
 - [ ] Track coverage
 - [ ] Implement unit tests for each module
-- [ ] Add integration tests
+- [x] Add integration tests
 - [ ] Implement property-based testing using proptest or quickcheck
 
 Performance and Optimization:

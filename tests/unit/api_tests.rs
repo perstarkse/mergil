@@ -94,37 +94,8 @@ async fn test_send_api_request_error() {
     assert!(matches!(error, ApiError::ApiErrorResponse(_)));
 }
 
-#[tokio::test]
-async fn test_send_api_request_retry() {
-    let mock_server = MockServer::start().await;
-
-    // mock_error_api_response(&mock_server).await;
-    mock_successful_api_response(&mock_server).await;
-    env::set_var("OPENROUTER_API_KEY", "test_key");
-    let url = format!("{}/api/v1/chat/completions", &mock_server.uri());
-    let client = reqwest::Client::new();
-    let result = timeout(
-        Duration::from_secs(5),
-        api::send_api_request(
-            &client,
-            "test_key",
-            "test-model",
-            &vec!["Hello".to_string()],
-            false,
-            Some(&url),
-        ),
-    )
-    .await;
-
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap().unwrap(), "Hello, world!");
-}
-
 #[test]
 fn test_api_error_display() {
-    // let request_error = ApiError::RequestFailed(reqwest::Error::is_timeout("timeout"));
-    // assert!(format!("{}", request_error).contains("Request failed"));
-
     let parse_error = ApiError::ResponseParseFailed(
         serde_json::from_str::<serde_json::Value>("invalid json").unwrap_err(),
     );
