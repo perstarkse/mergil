@@ -23,7 +23,7 @@ Error handling:
 
 Testing:
 - [ ] Track coverage
-- [ ] Implement unit tests for each module
+- [x] Implement unit tests for each module
 - [x] Add integration tests
 - [ ] Implement property-based testing using proptest or quickcheck
 
