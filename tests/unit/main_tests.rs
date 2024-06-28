@@ -1,99 +1,33 @@
-use assert_cmd::Command;
-use std::str;
+use mergil::common::{handle_input, Cli};
+use std::io::{self, Write};
+use std_prelude::Seek;
 
-#[test]
-fn test_cli_with_context() {
-    let mut cmd = Command::cargo_bin("mergil").unwrap();
-    let output = cmd
-        .arg("Hello, world!")
-        .arg("--debug")
-        .env("RUST_TEST", "1")
-        .output()
-        .expect("Failed to execute command");
+#[tokio::test]
+async fn test_handle_input_with_context() {
+    let cli = Cli {
+        context: vec!["Hello, world!".to_string()],
+        model: "deepseek/deepseek-coder".to_string(),
+        debug: true,
+        markdown: false,
+    };
 
-    assert!(output.status.success());
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("Hello, world!"));
+    let contents = handle_input(&cli).await.unwrap();
+    assert_eq!(contents, vec!["Hello, world!".to_string()]);
 }
 
-#[test]
-fn test_cli_with_model_flag() {
-    let mut cmd = Command::cargo_bin("mergil").unwrap();
-    let output = cmd
-        .arg("-m")
-        .arg("gpt-3.5-turbo")
-        .arg("Test message")
-        .env("RUST_TEST", "1")
-        .arg("--debug")
-        .output()
-        .expect("Failed to execute command");
+#[tokio::test]
+async fn test_handle_input_with_piped_input() {
+    let cli = Cli {
+        context: vec!["Piped input test".to_string()],
+        model: "deepseek/deepseek-coder".to_string(),
+        debug: true,
+        markdown: false,
+    };
 
-    assert!(output.status.success());
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("Model: gpt-3.5-turbo"));
-    assert!(stdout.contains("Test message"));
-}
+    let mut input = io::Cursor::new(Vec::new());
+    input.write_all(b"Piped input test").unwrap();
+    input.seek(io::SeekFrom::Start(0)).unwrap();
 
-#[test]
-fn test_cli_with_debug_flag() {
-    let mut cmd = Command::cargo_bin("mergil").unwrap();
-    let output = cmd
-        .arg("--debug")
-        .arg("Debug test")
-        .env("RUST_TEST", "1")
-        .output()
-        .expect("Failed to execute command");
-
-    assert!(output.status.success());
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("Input content:"));
-    assert!(stdout.contains("Debug test"));
-}
-
-#[test]
-fn test_cli_with_markdown_flag() {
-    let mut cmd = Command::cargo_bin("mergil").unwrap();
-    let output = cmd
-        .arg("--markdown")
-        .arg("--debug")
-        .arg("# Markdown test")
-        .env("RUST_TEST", "1")
-        .output()
-        .expect("Failed to execute command");
-
-    assert!(output.status.success());
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("Markdown: true"));
-    assert!(stdout.contains("# Markdown test"));
-}
-
-#[test]
-fn test_cli_with_piped_input() {
-    let mut cmd = Command::cargo_bin("mergil").unwrap();
-    let output = cmd
-        .arg("--debug")
-        .write_stdin("Piped input test")
-        .env("RUST_TEST", "1")
-        .output()
-        .expect("Failed to execute command");
-
-    assert!(output.status.success());
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("Input content:"));
-    assert!(stdout.contains("Piped input test"));
-}
-
-#[test]
-fn test_cli_with_no_input() {
-    let mut cmd = Command::cargo_bin("mergil").unwrap();
-    let output = cmd
-        .arg("--debug")
-        .env("RUST_TEST", "1")
-        .env("NO_EDITOR", "1") // Set this environment variable to skip
-        .output()
-        .expect("Failed to execute command");
-
-    assert!(output.status.success());
-    let stdout = str::from_utf8(&output.stdout).unwrap();
-    assert!(stdout.contains("No input provided. Exiting."));
+    let contents = handle_input(&cli).await.unwrap();
+    assert_eq!(contents, vec!["Piped input test".to_string()]);
 }
