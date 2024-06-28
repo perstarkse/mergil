@@ -4,28 +4,24 @@ Features:
 - [x] Implement a STDIN input so I can pipe
 - [x] Implement cancellation when having editor open
 - [x] Implement README.md
-- [ ] Add help information
+- [x] Add help information
 - [ ] Recursion LLM calls
 - [x] Set up basic prompts
 - [x] Enable MD formatting of output, glow looks great
 - [x] Use clap-rs for arguments
-- [ ] Implement configuration file support (e.g., TOML or YAML)
 - [ ] Add support for multiple API providers (not just OpenRouter)
-- [ ] Implement a progress indicator for long-running API calls
-- [ ] Implement output to file option
 
 Error handling:
 - [x] Missing model
-- [ ] Network error
-- [ ] Missing/wrong API key
-- [ ] Implement custom error types for better error handling
+- [x] Network error
+- [x] Missing/wrong API key
+- [x] Implement custom error types for better error handling
 - [x] Add retry mechanism for transient errors
 
 Testing:
-- [ ] Track coverage
+- [x] Track coverage
 - [x] Implement unit tests for each module
 - [x] Add integration tests
-- [ ] Implement property-based testing using proptest or quickcheck
 
 Performance and Optimization:
 - [ ] Implement async runtime for concurrent API calls
