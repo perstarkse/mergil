@@ -44,7 +44,7 @@ pub async fn handle_input(cli: &Cli) -> Result<Vec<String>, Box<dyn std::error::
     }
 
     // If no input from args or pipe, open editor (unless NO_EDITOR is set)
-    if contents.is_empty() && std::env::var("NO_EDITOR").is_err() {
+    if cli.context.is_empty() && std::env::var("NO_EDITOR").is_err() {
         match input::get_input(true)? {
             InputResult::Content(content) => contents.push(content),
             InputResult::Cancelled => {
