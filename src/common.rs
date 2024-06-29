@@ -1,10 +1,12 @@
 use crate::api;
 use crate::input;
 use crate::input::InputResult;
+use crate::input::RealEditor;
+use crate::input::RealStdin;
+use crate::input::StdinReader;
 use crate::markdown;
 use atty::Stream;
 use clap::Parser;
-use std::io::{self, Read};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,10 +36,13 @@ pub async fn handle_input(cli: &Cli) -> Result<Vec<String>, Box<dyn std::error::
         contents.push(cli.context.join(" "));
     }
 
+    let mut real_stdin = RealStdin;
+    let real_editor = RealEditor;
+
     // Check for piped input
     if !atty::is(Stream::Stdin) {
         let mut piped_input = String::new();
-        io::stdin().read_to_string(&mut piped_input)?;
+        real_stdin.read_to_string(&mut piped_input)?;
         if !piped_input.trim().is_empty() {
             contents.push(piped_input);
         }
@@ -45,7 +50,7 @@ pub async fn handle_input(cli: &Cli) -> Result<Vec<String>, Box<dyn std::error::
 
     // If no input from args or pipe, open editor (unless NO_EDITOR is set)
     if cli.context.is_empty() && std::env::var("NO_EDITOR").is_err() {
-        match input::get_input(true)? {
+        match input::get_input(true, &mut real_stdin, &real_editor)? {
             InputResult::Content(content) => contents.push(content),
             InputResult::Cancelled => {
                 if cli.debug {

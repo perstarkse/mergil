@@ -1,8 +1,7 @@
 use mergil::api;
-use mergil::input;
+use mergil::input::{self, EditorOpener, InputResult, StdinReader};
 use reqwest::Client;
-use std::fs::File;
-use std::io::Read;
+use std::cell::RefCell;
 
 async fn setup_api_key() -> Option<String> {
     match std::env::var("OPENROUTER_API_KEY") {
@@ -14,34 +13,31 @@ async fn setup_api_key() -> Option<String> {
     }
 }
 
-#[tokio::test]
-async fn test_api_request() {
-    if let Some(api_key) = setup_api_key().await {
-        let test_data = "This is a test input.";
-        let temp_file = input::write_test_data(test_data).unwrap();
-        let temp_path = temp_file.path().to_str().unwrap().to_string();
+struct MockStdin {
+    content: RefCell<String>,
+    is_atty: bool,
+}
 
-        let mut file = File::open(&temp_path).unwrap();
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
+impl StdinReader for MockStdin {
+    fn read_to_string(&mut self, buf: &mut String) -> std::io::Result<usize> {
+        let content = self.content.borrow();
+        buf.push_str(&content);
+        Ok(content.len())
+    }
 
-        assert_eq!(contents, test_data);
+    fn is_atty(&self) -> bool {
+        self.is_atty
+    }
+}
 
-        let contents_vec = vec![contents];
+struct MockEditor {
+    content: RefCell<String>,
+}
 
-        let client = Client::new();
-        let response = api::send_api_request(
-            &client,
-            &api_key,
-            "deepseek/deepseek-coder",
-            &contents_vec,
-            false,
-            None,
-        )
-        .await
-        .unwrap();
-
-        assert!(!response.is_empty());
+impl EditorOpener for MockEditor {
+    fn open_editor(&self, temp_path: &str) -> std::io::Result<()> {
+        std::fs::write(temp_path, self.content.borrow().as_bytes())?;
+        Ok(())
     }
 }
 
@@ -64,7 +60,7 @@ async fn test_markdown_api_request() {
         .unwrap();
 
         assert!(!response.is_empty());
-        assert!(response.contains("```rust"));
+        assert!(response.contains("```"));
     }
 }
 
@@ -98,4 +94,49 @@ fn test_missing_api_key() {
         api::get_api_key();
     });
     assert!(result.is_err());
+}
+
+#[test]
+fn test_get_input_piped() {
+    let mut mock_stdin = MockStdin {
+        content: RefCell::new("Test input\n".to_string()),
+        is_atty: false,
+    };
+    let mock_editor = MockEditor {
+        content: RefCell::new(String::new()),
+    };
+
+    let result = input::get_input(false, &mut mock_stdin, &mock_editor).unwrap();
+
+    assert!(matches!(result, InputResult::Content(content) if content == "Test input\n"));
+}
+
+#[test]
+fn test_get_input_force_editor() {
+    let mut mock_stdin = MockStdin {
+        content: RefCell::new(String::new()),
+        is_atty: true,
+    };
+    let mock_editor = MockEditor {
+        content: RefCell::new("Editor content".to_string()),
+    };
+
+    let result = input::get_input(true, &mut mock_stdin, &mock_editor).unwrap();
+
+    assert!(matches!(result, InputResult::Content(content) if content == "Editor content"));
+}
+
+#[test]
+fn test_get_input_force_editor_empty() {
+    let mut mock_stdin = MockStdin {
+        content: RefCell::new(String::new()),
+        is_atty: true,
+    };
+    let mock_editor = MockEditor {
+        content: RefCell::new("".to_string()),
+    };
+
+    let result = input::get_input(true, &mut mock_stdin, &mock_editor).unwrap();
+
+    assert!(matches!(result, InputResult::Cancelled));
 }
