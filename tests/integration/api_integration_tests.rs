@@ -55,6 +55,7 @@ async fn test_markdown_api_request() {
             &contents_vec,
             true,
             None,
+            false,
         )
         .await
         .unwrap();
@@ -79,6 +80,7 @@ async fn test_multiple_inputs() {
             &contents_vec,
             false,
             None,
+            false,
         )
         .await
         .unwrap();

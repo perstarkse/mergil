@@ -26,6 +26,10 @@ pub struct Cli {
     /// Use Markdown rendering
     #[arg(long, default_value = "false")]
     pub markdown: bool,
+
+    /// Enable pre-processing mode
+    #[arg(long, default_value = "false")]
+    pub preprocess: bool,
 }
 
 pub async fn handle_input(cli: &Cli) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -89,9 +93,40 @@ pub async fn process_contents(
         let api_key = api::get_api_key();
         let client = reqwest::Client::new();
 
-        let response =
-            api::send_api_request(&client, &api_key, &cli.model, &contents, cli.markdown, None)
-                .await?;
+        let mut input_contents = contents.to_vec();
+
+        if cli.preprocess {
+            let preprocessed_message = api::send_api_request(
+                &client,
+                &api_key,
+                &cli.model,
+                &input_contents,
+                cli.markdown,
+                None,
+                true,
+            )
+            .await?;
+            if cli.debug {
+                println!("Preprocessed message: {}", preprocessed_message);
+            }
+            // Replace the last message with the preprocessed message
+            if !input_contents.is_empty() {
+                *input_contents.last_mut().unwrap() = preprocessed_message;
+            } else {
+                input_contents.push(preprocessed_message);
+            }
+        }
+
+        let response = api::send_api_request(
+            &client,
+            &api_key,
+            &cli.model,
+            &input_contents,
+            cli.markdown,
+            None,
+            false,
+        )
+        .await?;
 
         let skin = markdown::create_madskin();
 

@@ -60,6 +60,7 @@ async fn test_send_api_request_success() {
             &vec!["Hello".to_string()],
             false,
             Some(&url),
+            false,
         ),
     )
     .await;
@@ -85,6 +86,7 @@ async fn test_send_api_request_error() {
             &vec!["Hello".to_string()],
             false,
             Some(&url),
+            false,
         ),
     )
     .await;

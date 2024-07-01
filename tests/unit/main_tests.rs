@@ -10,6 +10,7 @@ async fn test_run() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let result = mergil::run(cli).await;

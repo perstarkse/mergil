@@ -75,9 +75,10 @@ async fn make_api_request(
     contents: &[String],
     markdown: bool,
     base_url: Option<&str>,
+    preprocess: bool,
 ) -> Result<String, ApiError> {
     let url = base_url.unwrap_or("https://openrouter.ai/api/v1/chat/completions");
-    let messages = build_messages(contents, markdown);
+    let messages = build_messages(contents, markdown, preprocess);
     let request_body = serde_json::json!({
         "model": model,
         "messages": messages,
@@ -109,7 +110,23 @@ async fn make_api_request(
         .unwrap_or_default())
 }
 
-fn build_messages(contents: &[String], markdown: bool) -> Vec<serde_json::Value> {
+fn build_messages(contents: &[String], markdown: bool, preprocess: bool) -> Vec<serde_json::Value> {
+    if preprocess {
+        let mut messages = vec![serde_json::json!({
+            "role": "system",
+            "content": "Reformulate the user's submission into a clear and detailed instruction that captures the essence of what the user is asking for. Ensure that the reformulated instruction is phrased as if it were the user's original query or instruction, aiming to clarify any ambiguities and to provide a comprehensive understanding of the user's intent.  Prioritize maintaining all existing functionalities in the reformulated instruction unless the user explicitly requests the removal or modification of a specific feature. If necessary, add context or examples to enhance the clarity and specificity of the instruction.  If the user's submission is unclear or incomplete, attempt to infer the missing information or provide a helpful suggestion for clarification. Stay concise and avoid introducing unnecessary complexity or jargon, focusing on producing a reformulation that is easy to understand and actionable."
+        })];
+
+        messages.extend(contents.iter().map(|content| {
+            serde_json::json!({
+                "role": "user",
+                "content": content
+            })
+        }));
+
+        return messages;
+    };
+
     let mut messages = vec![serde_json::json!({
         "role": "system",
         "content": "You are a helpful coding tool. You should keep
@@ -147,12 +164,17 @@ pub async fn send_api_request(
     contents: &[String],
     markdown: bool,
     base_url: Option<&str>,
+    preprocess: bool,
 ) -> Result<String, ApiError> {
     let max_retries = 3;
     let initial_delay = Duration::from_millis(100);
 
     for attempt in 0..max_retries {
-        match make_api_request(client, api_key, model, contents, markdown, base_url).await {
+        match make_api_request(
+            client, api_key, model, contents, markdown, base_url, preprocess,
+        )
+        .await
+        {
             Ok(response) => return Ok(response),
             Err(e) => {
                 if attempt == max_retries - 1 {

@@ -12,6 +12,7 @@ async fn test_handle_input_with_context() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = handle_input(&cli).await.unwrap();
@@ -25,6 +26,7 @@ async fn test_handle_input_with_piped_input() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let mut input = io::Cursor::new(Vec::new());
@@ -41,6 +43,7 @@ async fn test_handle_input_no_input_provided() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = handle_input(&cli).await.unwrap();
@@ -55,6 +58,7 @@ async fn test_handle_input_empty_context() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = handle_input(&cli).await.unwrap();
@@ -68,6 +72,7 @@ async fn test_handle_input_multiple_context_entries() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = handle_input(&cli).await.unwrap();
@@ -81,6 +86,7 @@ async fn test_handle_input_debug_flag() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = handle_input(&cli).await.unwrap();
@@ -94,6 +100,7 @@ async fn test_handle_input_markdown_flag() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: true,
+        preprocess: false,
     };
 
     let contents = handle_input(&cli).await.unwrap();
@@ -107,6 +114,7 @@ async fn test_handle_input_empty_piped_input() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let mut input = io::Cursor::new(Vec::new());
@@ -124,6 +132,7 @@ async fn test_process_contents_debug_flag() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = vec!["Debug test".to_string()];
@@ -139,6 +148,7 @@ async fn test_process_contents_markdown_flag() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: true,
+        preprocess: false,
     };
 
     let contents = vec!["Markdown test".to_string()];
@@ -154,6 +164,7 @@ async fn test_process_contents_no_input() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = Vec::<String>::new();
@@ -169,6 +180,7 @@ async fn test_process_contents_multiple_inputs() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = vec!["Input 1".to_string(), "Input 2".to_string()];
@@ -184,6 +196,7 @@ async fn test_process_contents_skip_api_call() {
         model: "deepseek/deepseek-coder".to_string(),
         debug: true,
         markdown: false,
+        preprocess: false,
     };
 
     let contents = vec!["Test API skip".to_string()];
