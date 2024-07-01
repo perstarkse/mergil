@@ -1,4 +1,64 @@
-# Updated Roadmap
+# Mergil
+
+Mergil is a command-line interface (CLI) tool that interacts with AI models to assist with coding tasks.
+
+## Features
+
+- Interact with AI models for code-related queries
+- Support for multiple input methods (command-line arguments, piped input, and text editor)
+- Markdown rendering for better readability
+- Pre-processing mode for reformulating user queries
+- Configurable model selection
+- Debug output option
+
+## Usage
+
+```
+mergil [OPTIONS] [CONTEXT]...
+```
+
+### Options
+
+- `--model <MODEL>`: Specify the AI model to use (default: "deepseek/deepseek-coder")
+- `--debug`: Enable debug output
+- `--markdown`: Use Markdown rendering for responses
+- `--preprocess`: Enable pre-processing mode for query reformulation
+
+### Arguments
+
+- `[CONTEXT]...`: Additional context or questions (optional)
+
+## Environment Variables
+
+- `OPENROUTER_API_KEY`: Required API key for OpenRouter
+- `EDITOR`: Preferred text editor (defaults to "vi" if not set)
+- `NO_EDITOR`: Set to skip opening the editor for input
+
+## Testing
+
+Run the test suite using:
+
+```
+cargo test
+```
+
+This will execute both unit tests and integration tests.
+
+## Building
+
+To build the project, use:
+
+```
+cargo build
+```
+
+For a release build, add the `--release` flag.
+
+## License
+
+[MIT]
+
+## Roadmap
 
 Features:
 - [x] Implement a STDIN input so I can pipe
@@ -40,17 +100,10 @@ Code Quality and Maintenance:
 - [ ] Implement feature flags for optional functionalities
 
 Packaging and Distribution:
-<!-- - [ ] Create binary releases for multiple platforms -->
-<!-- - [ ] Publish the crate on crates.io -->
 - [ ] Set up automatic version bumping and changelog generation
-
-<!-- Extensibility: -->
-<!-- - [ ] Implement a plugin system for custom commands or formatters -->
-<!-- - [ ] Create an API for the core functionality to allow other Rust programs to use it as a library -->
 
 Accessibility:
 - [ ] Ensure the CLI is accessible, with clear error messages and help text
-<!-- - [ ] Implement a TUI (Text User Interface) version using a library like tui-rs -->
 
 Internationalization:
 - [ ] Implement i18n support for error messages and CLI text
