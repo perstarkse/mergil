@@ -176,12 +176,10 @@ pub async fn send_api_request(
         .await
         {
             Ok(response) => return Ok(response),
-            Err(e) => {
-                if attempt == max_retries - 1 {
-                    return Err(e);
-                }
+            Err(_e) if attempt < max_retries - 1 => {
                 tokio::time::sleep(initial_delay * 2u32.pow(attempt as u32)).await;
             }
+            Err(e) => return Err(e),
         }
     }
     Err(ApiError::RetryExhausted)

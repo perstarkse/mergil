@@ -7,6 +7,5 @@ pub mod markdown;
 
 pub async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let contents = handle_input(&cli).await?;
-    process_contents(&cli, &contents).await?;
-    Ok(())
+    process_contents(&cli, &contents).await
 }
